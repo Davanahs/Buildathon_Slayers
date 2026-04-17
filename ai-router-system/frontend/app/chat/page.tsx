@@ -291,87 +291,117 @@ export default function ChatPage() {
       setIsRecording(false);
     }
   };
+const sendMessage = async () => {
+  if ((!input.trim() && attachments.length === 0) || isLoading) return;
 
-  const sendMessage = async () => {
-    if ((!input.trim() && attachments.length === 0) || isLoading) return;
-
-    const fileNames = attachments.map(f => f.name).join(", ");
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input.trim() || (attachments.length > 0 ? `Sent ${attachments.length} file(s): ${fileNames}` : ""),
-    };
-    const loadingId = (Date.now() + 1).toString();
-    const loadingMsg: Message = { id: loadingId, role: "assistant", content: "", isLoading: true };
-
-    setMessages((prev) => [...prev, userMsg, loadingMsg]);
-    setInput("");
-    setAttachments([]);
-    setIsLoading(true);
-    setBotMood("thinking");
-
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-
-    try {
-      const startTime = Date.now();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-      
-      const res = await fetch(`${apiUrl}/route`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMsg.content }),
-      });
-      
-      const data = await res.json();
-      const latency = Date.now() - startTime;
-      
-      if (!data.success) {
-        throw new Error(data.error || "Unknown error occurred.");
-      }
-
-      const routeData = data.data;
-      const category = routeData.category || "GENERAL";
-      const complexity = routeData.complexity || 5.0;
-      const confidence = routeData.confidence || 0.85;
-      const routerUsed = routeData.router_used || "unknown";
-
-      const model = MOCK_MODELS[Math.floor(Math.random() * MOCK_MODELS.length)];
-      const tokens = Math.floor(90 + Math.random() * 380);
-      const cost = parseFloat((tokens * 0.0000028).toFixed(7));
-      
-      const usedBandit = confidence < 0.8;
-      const cacheHit = Math.random() < 0.15;
-
-      const replies = [
-        `Routed via ${routerUsed.toUpperCase()} ${usedBandit ? "(Bandit routing on low confidence)" : "(Librarian)"} to **${model.id}** in Tier ${model.tier}. Category detected: ${category} at complexity ${complexity}. ${cacheHit ? "Semantic cache hit! Returning stored result." : "No cache match found — fresh inference run."}`,
-        `Prompt classified as **${category}** (complexity ${complexity}). ${confidence >= 0.8 ? `High librarian confidence (${(confidence * 100).toFixed(0)}%) — model selected directly via ${routerUsed}.` : `Low confidence (${(confidence * 100).toFixed(0)}%) — Bandit system engaged to pick optimal model via ${routerUsed}.`} Result stored to vector vault.`,
-        `Vector similarity search returned ${cacheHit ? "a strong match (distance < threshold)" : "no match (distance > threshold)"}. ${cacheHit ? "Serving cached response." : `Librarian classified **${category}** → selected **${model.id}** via ${routerUsed}.`} Tokens consumed: ${tokens}. Cost: $${cost}.`,
-      ];
-
-      const reply = replies[Math.floor(Math.random() * replies.length)];
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === loadingId
-            ? { ...m, content: reply, model: model.id, tokens, cost, latency, feedback: null, isLoading: false, routeInfo: { category, complexity, tier: model.tier, confidence, usedBandit, cacheHit } }
-            : m
-        )
-      );
-    } catch (err: any) {
-      console.error(err);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === loadingId
-            ? { ...m, content: `System Error: ${err.message}`, isLoading: false }
-            : m
-        )
-      );
-    } finally {
-      setIsLoading(false);
-      setBotMood("celebrating");
-      setTimeout(() => setBotMood("idle"), 2800);
-    }
+  const fileNames = attachments.map(f => f.name).join(", ");
+  const userMsg: Message = {
+    id: Date.now().toString(),
+    role: "user",
+    content:
+      input.trim() ||
+      (attachments.length > 0
+        ? `Sent ${attachments.length} file(s): ${fileNames}`
+        : ""),
   };
+
+  const loadingId = (Date.now() + 1).toString();
+  const loadingMsg: Message = {
+    id: loadingId,
+    role: "assistant",
+    content: "",
+    isLoading: true,
+  };
+
+  setMessages((prev) => [...prev, userMsg, loadingMsg]);
+  setInput("");
+  setAttachments([]);
+  setIsLoading(true);
+  setBotMood("thinking");
+
+  if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+  try {
+    const startTime = Date.now();
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+    const res = await fetch(`${apiUrl}/route`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt: userMsg.content }),
+    });
+
+    const data = await res.json();
+
+    console.log("API RESPONSE:", data); // 🔍 DEBUG
+
+    const latency = Date.now() - startTime;
+
+    // ✅ FIX: handle both formats
+    const routeData = data.data || data;
+
+    const category = routeData.category || "GENERAL";
+    const complexity = routeData.complexity ?? 5.0;
+    const confidence = routeData.confidence ?? 0.85;
+    const routerUsed = routeData.router_used || "unknown";
+
+    const model =
+      MOCK_MODELS[Math.floor(Math.random() * MOCK_MODELS.length)];
+
+    const tokens = Math.floor(90 + Math.random() * 380);
+    const cost = parseFloat((tokens * 0.0000028).toFixed(7));
+
+    const usedBandit = confidence < 0.8;
+    const cacheHit = Math.random() < 0.15;
+
+   const reply = `Routed via ${routerUsed.toUpperCase()} to **${model.id}**.`;
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === loadingId
+          ? {
+              ...m,
+              content: reply,
+              model: model.id,
+              tokens,
+              cost,
+              latency,
+              feedback: null,
+              isLoading: false,
+              routeInfo: {
+                category,
+                complexity,
+                tier: model.tier,
+                confidence,
+                usedBandit,
+                cacheHit,
+              },
+            }
+          : m
+      )
+    );
+  } catch (err: any) {
+    console.error(err);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === loadingId
+          ? {
+              ...m,
+              content: `System Error: ${err.message}`,
+              isLoading: false,
+            }
+          : m
+      )
+    );
+  } finally {
+    setIsLoading(false);
+    setBotMood("celebrating");
+    setTimeout(() => setBotMood("idle"), 2800);
+  }
+};
 
   const handleFeedback = (id: string, value: "up" | "down") => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, feedback: m.feedback === value ? null : value } : m)));
@@ -688,39 +718,22 @@ export default function ChatPage() {
 
                   {msg.role === "assistant" && !msg.isLoading && msg.model && msg.routeInfo && (
                     <div className="route-strip">
-                      <div className="tag model-tag">
-                        <div className="dot" style={{ background: modelColors[msg.model] || "#6366f1", boxShadow: `0 0 5px ${modelColors[msg.model] || "#6366f1"}` }} />
-                        {msg.model}
-                      </div>
-                      <div className="tag">Tier {msg.routeInfo.tier}</div>
-                      <div className="tag">{msg.routeInfo.category} · {msg.routeInfo.complexity}</div>
-                      <div className="tag">
-                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        {msg.latency}ms
-                      </div>
-                      <div className="tag">
-                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                        ${msg.cost}
-                      </div>
-                      {msg.routeInfo.cacheHit && <div className="tag cache-hit">⚡ cache hit</div>}
-                      {msg.routeInfo.usedBandit && <div className="tag bandit-used">🎰 bandit</div>}
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "auto" }}>
-                        <div className="complexity-bar-wrap" style={{ width: "60px" }}>
-                          <div className="complexity-bar">
-                            <div className="complexity-fill" style={{ width: `${(msg.routeInfo.complexity / 10) * 100}%` }} />
-                          </div>
-                        </div>
-                        <span style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "'DM Mono', monospace" }}>{msg.routeInfo.complexity}</span>
-                      </div>
-                      <div className="feedback-row">
-                        <button className={`fb-btn ${msg.feedback === "up" ? "up-active" : ""}`} onClick={() => handleFeedback(msg.id, "up")} title="Good">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-                        </button>
-                        <button className={`fb-btn ${msg.feedback === "down" ? "dn-active" : ""}`} onClick={() => handleFeedback(msg.id, "down")} title="Poor">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-2"/></svg>
-                        </button>
-                      </div>
-                    </div>
+  <div className="tag model-tag">
+    {msg.model}
+  </div>
+
+  <div className="tag">
+    {msg.routeInfo.category}
+  </div>
+
+  <div className="tag">
+    {msg.routeInfo.complexity}
+  </div>
+
+  <div className="tag">
+    ⏱ {msg.latency}ms
+  </div>
+</div>
                   )}
                 </div>
               </div>
