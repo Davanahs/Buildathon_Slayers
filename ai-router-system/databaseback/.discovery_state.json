@@ -1,0 +1,14 @@
+{
+  "gemini": {
+    "key_hash": "0bd26f7856f9705b6b224f663e3ba0f94c7758e4af27e6f3f9a077efcd2e7b0d",
+    "last_run_at": "2026-04-17T10:02:20.593002"
+  },
+  "openrouter": {
+    "key_hash": "d7baabbb6fe43330dba75f89a1e238b5a67295df4b15acce1efba9b732ff694c",
+    "last_run_at": "2026-04-17T10:32:43.064918"
+  },
+  "groq": {
+    "key_hash": "fc8a12d5a189c0a22d14644b7c3756e852f83e875024a13fe850b09e50d1a9f0",
+    "last_run_at": "2026-04-17T09:48:21.521274"
+  }
+}
