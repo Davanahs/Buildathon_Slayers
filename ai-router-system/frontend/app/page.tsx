@@ -14,6 +14,11 @@ export default function LandingPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -49,6 +54,8 @@ export default function LandingPage() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
       particles.forEach((p, i) => {
         p.x += p.vx;
         p.y += p.vy;
@@ -57,7 +64,7 @@ export default function LandingPage() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(180, 200, 255, ${p.baseAlpha})`;
+        ctx.fillStyle = isLight ? `rgba(59, 130, 246, ${p.baseAlpha})` : `rgba(180, 200, 255, ${p.baseAlpha})`;
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j++) {
@@ -68,7 +75,7 @@ export default function LandingPage() {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(120, 160, 255, ${0.05 * (1 - dist / 150)})`;
+            ctx.strokeStyle = isLight ? `rgba(59, 130, 246, ${0.08 * (1 - dist / 150)})` : `rgba(120, 160, 255, ${0.05 * (1 - dist / 150)})`;
             ctx.lineWidth = 1;
             ctx.stroke();
           }
@@ -102,6 +109,28 @@ export default function LandingPage() {
           --accent-2: #8b5cf6;
           --glass-bg: rgba(15, 23, 42, 0.4);
           --glass-border: rgba(255, 255, 255, 0.06);
+          --aura-color-1: rgba(59, 130, 246, 0.08);
+          --aura-color-2: rgba(139, 92, 246, 0.05);
+          --bot-body: rgba(30, 41, 59, 1);
+          --bot-border: rgba(255, 255, 255, 0.12);
+          --nav-bg: rgba(3, 5, 8, 0.5);
+          --card-hover-bg: rgba(30, 41, 59, 0.6);
+        }
+
+        :root[data-theme="light"] {
+          --bg: #f8fafc;
+          --text-main: #0f172a;
+          --text-muted: #64748b;
+          --accent-1: #3b82f6;
+          --accent-2: #8b5cf6;
+          --glass-bg: rgba(255, 255, 255, 0.6);
+          --glass-border: rgba(0, 0, 0, 0.06);
+          --aura-color-1: rgba(59, 130, 246, 0.06);
+          --aura-color-2: rgba(139, 92, 246, 0.04);
+          --bot-body: rgba(241, 245, 249, 1);
+          --bot-border: rgba(0, 0, 0, 0.1);
+          --nav-bg: rgba(248, 250, 252, 0.5);
+          --card-hover-bg: rgba(241, 245, 249, 0.8);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -128,7 +157,7 @@ export default function LandingPage() {
           width: 800px;
           height: 800px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.05) 40%, transparent 70%);
+          background: radial-gradient(circle, var(--aura-color-1) 0%, var(--aura-color-2) 40%, transparent 70%);
           filter: blur(60px);
           transform: translate(-50%, -50%);
           transition: left 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -155,7 +184,7 @@ export default function LandingPage() {
           justify-content: space-between;
           padding: 24px 48px;
           border-bottom: 1px solid var(--glass-border);
-          background: rgba(3, 5, 8, 0.5);
+          background: var(--nav-bg);
           backdrop-filter: blur(12px);
           position: sticky;
           top: 0;
@@ -192,6 +221,29 @@ export default function LandingPage() {
         }
         .nav-links a:hover {
           color: var(--text-main);
+        }
+        
+        .theme-toggle-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: var(--text-muted);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+        .theme-toggle-btn:hover {
+          background: var(--glass-bg);
+          color: var(--text-main);
+          border-color: var(--glass-border);
+        }
+        .theme-toggle-btn svg {
+          width: 18px;
+          height: 18px;
         }
 
         .hero-section {
@@ -327,7 +379,7 @@ export default function LandingPage() {
         }
 
         .feature-card:hover {
-          background: rgba(30, 41, 59, 0.6);
+          background: var(--card-hover-bg);
           border-color: rgba(96, 165, 250, 0.3);
           transform: translateY(-4px);
         }
@@ -464,11 +516,17 @@ export default function LandingPage() {
           <div className="logo">
             APEX<span>AI</span>
           </div>
-          <div className="nav-links">
-            <a>Documentation</a>
-            <a>System Status</a>
-            <a>About</a>
-          </div>
+          <button 
+            className="theme-toggle-btn" 
+            onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+            title="Toggle Theme"
+          >
+            {theme === "dark" ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            )}
+          </button>
         </nav>
 
         <main className="hero-section">
@@ -485,21 +543,21 @@ export default function LandingPage() {
                <path d="M46 100 Q50 115 54 100 Z" fill="#93c5fd" className="bot-flame-inner" />
                
                {/* Body */}
-               <path d="M30 85 C30 75, 70 75, 70 85 C70 98, 60 105, 50 105 C40 105, 30 98, 30 85 Z" fill="rgba(30, 41, 59, 1)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+               <path d="M30 85 C30 75, 70 75, 70 85 C70 98, 60 105, 50 105 C40 105, 30 98, 30 85 Z" fill="var(--bot-body)" stroke="var(--bot-border)" strokeWidth="1.5" />
                {/* Body accents */}
                <circle cx="50" cy="90" r="4" fill="#0f172a" />
                <circle cx="50" cy="90" r="2" fill="#3b82f6" opacity="0.8" />
                
                {/* Arms (floating) */}
-               <rect x="18" y="76" width="8" height="20" rx="4" fill="rgba(30, 41, 59, 1)" stroke="rgba(255,255,255,0.12)" className="bot-arm-l" />
-               <rect x="74" y="76" width="8" height="20" rx="4" fill="rgba(30, 41, 59, 1)" stroke="rgba(255,255,255,0.12)" className="bot-arm-r" />
+               <rect x="18" y="76" width="8" height="20" rx="4" fill="var(--bot-body)" stroke="var(--bot-border)" className="bot-arm-l" />
+               <rect x="74" y="76" width="8" height="20" rx="4" fill="var(--bot-body)" stroke="var(--bot-border)" className="bot-arm-r" />
                
                {/* Neck joint */}
                <rect x="46" y="65" width="8" height="12" fill="#0f172a" />
                
                <g className="bot-head-group">
                  {/* Head Outer */}
-                 <rect x="20" y="30" width="60" height="40" rx="16" fill="rgba(30, 41, 59, 1)" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+                 <rect x="20" y="30" width="60" height="40" rx="16" fill="var(--bot-body)" stroke="var(--bot-border)" strokeWidth="1.5" />
                  
                  {/* Face Plate Space */}
                  <rect x="26" y="36" width="48" height="22" rx="8" fill="#030508" stroke="rgba(59, 130, 246, 0.2)" />
