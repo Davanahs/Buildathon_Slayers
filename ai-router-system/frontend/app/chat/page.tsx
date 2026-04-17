@@ -312,38 +312,65 @@ export default function ChatPage() {
 
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    await new Promise((r) => setTimeout(r, 1600 + Math.random() * 1000));
+    try {
+      const startTime = Date.now();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      
+      const res = await fetch(`${apiUrl}/route`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userMsg.content }),
+      });
+      
+      const data = await res.json();
+      const latency = Date.now() - startTime;
+      
+      if (!data.success) {
+        throw new Error(data.error || "Unknown error occurred.");
+      }
 
-    const model = MOCK_MODELS[Math.floor(Math.random() * MOCK_MODELS.length)];
-    const tokens = Math.floor(90 + Math.random() * 380);
-    const cost = parseFloat((tokens * 0.0000028).toFixed(7));
-    const latency = Math.floor(280 + Math.random() * 1100);
-    const categories = ["CODE", "ANALYSIS", "CREATIVE", "MATH", "GENERAL"];
-    const category = categories[Math.floor(Math.random() * categories.length)];
-    const complexity = parseFloat((Math.random() * 9.5 + 0.5).toFixed(1));
-    const confidence = parseFloat((Math.random() * 0.35 + 0.62).toFixed(2));
-    const usedBandit = confidence < 0.8;
-    const cacheHit = Math.random() < 0.15;
+      const routeData = data.data;
+      const category = routeData.category || "GENERAL";
+      const complexity = routeData.complexity || 5.0;
+      const confidence = routeData.confidence || 0.85;
+      const routerUsed = routeData.router_used || "unknown";
 
-    const replies = [
-      `Routed via ${usedBandit ? "Bandit (low confidence)" : "Librarian"} to **${model.id}** in Tier ${model.tier}. Category detected: ${category} at complexity ${complexity}. ${cacheHit ? "Semantic cache hit! Returning stored result." : "No cache match found — fresh inference run."}`,
-      `Prompt classified as **${category}** (complexity ${complexity}). ${confidence >= 0.8 ? `High librarian confidence (${(confidence * 100).toFixed(0)}%) — model selected directly.` : `Low confidence (${(confidence * 100).toFixed(0)}%) — Bandit system engaged to pick optimal model from candidates.`} Result stored to vector vault for future cache hits.`,
-      `Vector similarity search returned ${cacheHit ? "a strong match (distance < threshold)" : "no match (distance > threshold)"}. ${cacheHit ? "Serving cached response." : `Librarian classified **${category}** → Tier ${model.tier} → selected **${model.id}**.`} Tokens consumed: ${tokens}. Cost: $${cost}.`,
-    ];
+      const model = MOCK_MODELS[Math.floor(Math.random() * MOCK_MODELS.length)];
+      const tokens = Math.floor(90 + Math.random() * 380);
+      const cost = parseFloat((tokens * 0.0000028).toFixed(7));
+      
+      const usedBandit = confidence < 0.8;
+      const cacheHit = Math.random() < 0.15;
 
-    const reply = replies[Math.floor(Math.random() * replies.length)];
+      const replies = [
+        `Routed via ${routerUsed.toUpperCase()} ${usedBandit ? "(Bandit routing on low confidence)" : "(Librarian)"} to **${model.id}** in Tier ${model.tier}. Category detected: ${category} at complexity ${complexity}. ${cacheHit ? "Semantic cache hit! Returning stored result." : "No cache match found — fresh inference run."}`,
+        `Prompt classified as **${category}** (complexity ${complexity}). ${confidence >= 0.8 ? `High librarian confidence (${(confidence * 100).toFixed(0)}%) — model selected directly via ${routerUsed}.` : `Low confidence (${(confidence * 100).toFixed(0)}%) — Bandit system engaged to pick optimal model via ${routerUsed}.`} Result stored to vector vault.`,
+        `Vector similarity search returned ${cacheHit ? "a strong match (distance < threshold)" : "no match (distance > threshold)"}. ${cacheHit ? "Serving cached response." : `Librarian classified **${category}** → selected **${model.id}** via ${routerUsed}.`} Tokens consumed: ${tokens}. Cost: $${cost}.`,
+      ];
 
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === loadingId
-          ? { ...m, content: reply, model: model.id, tokens, cost, latency, feedback: null, isLoading: false, routeInfo: { category, complexity, tier: model.tier, confidence, usedBandit, cacheHit } }
-          : m
-      )
-    );
+      const reply = replies[Math.floor(Math.random() * replies.length)];
 
-    setIsLoading(false);
-    setBotMood("celebrating");
-    setTimeout(() => setBotMood("idle"), 2800);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === loadingId
+            ? { ...m, content: reply, model: model.id, tokens, cost, latency, feedback: null, isLoading: false, routeInfo: { category, complexity, tier: model.tier, confidence, usedBandit, cacheHit } }
+            : m
+        )
+      );
+    } catch (err: any) {
+      console.error(err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === loadingId
+            ? { ...m, content: `System Error: ${err.message}`, isLoading: false }
+            : m
+        )
+      );
+    } finally {
+      setIsLoading(false);
+      setBotMood("celebrating");
+      setTimeout(() => setBotMood("idle"), 2800);
+    }
   };
 
   const handleFeedback = (id: string, value: "up" | "down") => {
